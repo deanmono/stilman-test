@@ -31,6 +31,7 @@ angular.module('appInterview')
                             }
                         });
                     });
+                    console.log(unitMarkers)
                     return unitMarkers
                 });
         }
