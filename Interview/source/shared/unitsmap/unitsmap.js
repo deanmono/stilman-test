@@ -95,7 +95,6 @@ angular.module('appInterview')
                 for(let key in $scope.unselectedMarkers) {
                     let distanceApart = getDistanceFromLatLon($scope.unselectedMarkers[key].lat, $scope.unselectedMarkers[key].lng, $scope.marker.lat, $scope.marker.lng);
                     if (distanceApart < $scope.slider.value) {
-                        console.log($scope.unselectedMarkers[key]);
                         $scope.markers[key].icon.html = '<div style="height:20px;width:20px;background-color:rgb(255,0,0);display:block;"></div>'
                     } else {
                         $scope.markers[key].icon.html = '<div style="height:20px;width:20px;background-color:rgb(128,224,255);display:block;"></div>'
