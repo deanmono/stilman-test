@@ -20,7 +20,7 @@ angular.module('appInterview')
                         unitMarkers.push({
                             lat: parseInt(unit.Location.Lat),
                             lng: parseInt(unit.Location.Lon),
-                            focus: true,
+                            focus: false,
                             draggable: false,
                             message: unit.ID.toString(),
                             icon: {
@@ -31,18 +31,34 @@ angular.module('appInterview')
                             }
                         });
                     });
-                    console.log(unitMarkers)
                     return unitMarkers
                 });
         }
         return FeatureData;
     }])
-    .controller('UnitsmapController', function ($http, $scope, FeatureData, leafletMarkerEvents, leafletLogger, _) {
-        FeatureData.getUnits().then(async function(result) {
-            $scope.markers = await result
-            $scope.marker = _.find(result, 'focus');
-            $scope.$apply();
-            $scope.changeMarker();
+    .controller('UnitsmapController', function ($http, $scope, $q, FeatureData, leafletMarkerEvents, leafletLogger, _) {
+        FeatureData.getUnits().then(function(result) {
+            $scope.markers = result
+            $scope.marker = $scope.markers[0];
+        });
+
+        $scope.$on('leafletDirectiveMarker.map.click', function(event, args){
+
+            $scope.changeMarker().then((currentMarker) => {
+                $scope.marker = currentMarker;
+                $scope.paths = {
+                    shape: {
+                        type: "circle",
+                        radius: $scope.slider.value * $scope.metersInMile,
+                        latlngs: {
+                            lat: currentMarker.lat,
+                            lng: currentMarker.lng
+                        }
+                    }
+                }
+
+
+            });
         });
 
         $scope.metersInMile = 1609;
@@ -50,7 +66,7 @@ angular.module('appInterview')
         $scope.center = {
             lat: 51.505,
             lng: -0.09,
-            zoom: 4
+            zoom: 2
         }
 
         $scope.events =  {
@@ -62,7 +78,7 @@ angular.module('appInterview')
         $scope.paths = {
            shape: {
                type: "circle",
-               radius: 500 * $scope.metersInMile,
+               radius: 1 * $scope.metersInMile,
                latlngs: {
                    lat: 51.505,
                    lng: -0.09,
@@ -79,6 +95,21 @@ angular.module('appInterview')
         }
 
         $scope.$watch('slider.value', function() {
+            $scope.changeMarker().then((currentMarker) => {
+                $scope.paths = {
+                    shape: {
+                        type: "circle",
+                        radius: $scope.slider.value * $scope.metersInMile,
+                        latlngs: {
+                            lat: currentMarker.lat,
+                            lng: currentMarker.lng
+                        }
+                    }
+                }
+
+                $scope.marker = currentMarker;
+            });
+
             if($scope.marker) {
                 $scope.paths = {
                     shape: {
@@ -102,32 +133,18 @@ angular.module('appInterview')
                     }
                 };
             }
-            $scope.changeMarker();
         });
 
-        $scope.changeMarker = function(){
-            let markerEvents = leafletMarkerEvents.getAvailableEvents();
-            for (let k in markerEvents){
-                let eventName = 'leafletDirectiveMarker.map.' + markerEvents[k];
-                $scope.$on(eventName, function(event, args){
-                    let currentMarker = _.find(event.targetScope.markers, 'focus');
-                    $scope.eventDetected = event.name;
+        $scope.changeMarker = function() {
+            let defer = $q.defer();
 
-                    $scope.paths = {
-                        shape: {
-                            type: "circle",
-                            radius: $scope.slider.value * $scope.metersInMile,
-                            latlngs: {
-                                lat: currentMarker.lat,
-                                lng: currentMarker.lng
-                            }
-                        }
-                    }
-                    $scope.marker = currentMarker;
-                });
-            }
+            $scope.$on('leafletDirectiveMarker.map.click', function(event){
+                let currentMarker = _.find(event.targetScope.markers, 'focus');
+                defer.resolve(currentMarker);
+            });
+
+            return defer.promise;
         }
-
 
         //This function uses the Haversine formula and takes in latitude and longitude of two location and returns the distance between them
         function getDistanceFromLatLon(lat1,lon1,lat2,lon2) {
